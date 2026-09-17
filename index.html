@@ -440,13 +440,6 @@
         • 정밀하게 그리려면 <b>➕</b>로 확대한 뒤, <b>🤚 이동</b> 도구로 화면을 옮겨가며 그리세요
       </div>
 
-      <div class="zoom-controls">
-        <button class="tool-btn" onclick="zoomOut()">➖</button>
-        <span class="zoom-level-label" id="zoomLevelLabel">100%</span>
-        <button class="tool-btn" onclick="zoomIn()">➕</button>
-        <button class="tool-btn" onclick="zoomReset()">↺ 원래크기</button>
-      </div>
-
       <!-- 도구바 -->
       <div class="tool-bar">
         <button class="tool-btn active" id="tool-dim" onclick="setTool('dim')">📐 치수선</button>
@@ -454,7 +447,6 @@
         <button class="tool-btn" id="tool-rect" onclick="setTool('rect')">⬜ 사각형</button>
         <button class="tool-btn" id="tool-text" onclick="setTool('text')">🔤 텍스트</button>
         <button class="tool-btn" id="tool-pen" onclick="setTool('pen')">✏️ 펜</button>
-        <button class="tool-btn" id="tool-pan" onclick="setTool('pan')">🤚 이동</button>
         <button class="tool-btn" id="tool-delete" onclick="setTool('delete')">🎯 개별삭제</button>
         <button class="tool-btn danger" onclick="undoLast()">↩️ 실행취소</button>
         <button class="tool-btn danger" onclick="clearAll()">🗑️ 이 사진 지우기</button>
@@ -476,6 +468,14 @@
           <input type="range" id="lineWidth" min="1" max="8" value="2">
           <span id="lineWidthVal">2</span>
         </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button class="tool-btn" onclick="zoomOut()">➖</button>
+        <span class="zoom-level-label" id="zoomLevelLabel">100%</span>
+        <button class="tool-btn" onclick="zoomIn()">➕</button>
+        <button class="tool-btn" id="tool-pan" onclick="setTool('pan')">🤚 이동</button>
+        <button class="tool-btn" onclick="zoomReset()">↺ 원래크기</button>
       </div>
 
       <div id="canvas-container">
