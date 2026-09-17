@@ -427,7 +427,8 @@
         💡 <b>사용법:</b> 썸네일을 눌러 사진을 바꾸고, 사진마다 따로 치수를 그릴 수 있어요.<br>
         • <b>치수선</b>: 드래그 → 팝업에서 mm 입력<br>
         • <b>화살표</b>: 방향 표시 &nbsp; • <b>텍스트</b>: 탭 위치에 글자 입력<br>
-        • 사진을 다 그렸으면 썸네일의 <b>＋</b>를 눌러 다음 부위 사진을 추가하세요
+        • <b>개별삭제</b>: 지우고 싶은 선/화살표/텍스트를 탭하면 그것만 삭제돼요<br>
+        • <b>실행취소</b>: 방금 그린 것만 되돌려요 &nbsp; • 사진을 다 그렸으면 썸네일의 <b>＋</b>로 다음 사진 추가
       </div>
 
       <!-- 도구바 -->
@@ -437,6 +438,7 @@
         <button class="tool-btn" id="tool-rect" onclick="setTool('rect')">⬜ 사각형</button>
         <button class="tool-btn" id="tool-text" onclick="setTool('text')">🔤 텍스트</button>
         <button class="tool-btn" id="tool-pen" onclick="setTool('pen')">✏️ 펜</button>
+        <button class="tool-btn" id="tool-delete" onclick="setTool('delete')">🎯 개별삭제</button>
         <button class="tool-btn danger" onclick="undoLast()">↩️ 실행취소</button>
         <button class="tool-btn danger" onclick="clearAll()">🗑️ 이 사진 지우기</button>
       </div>
@@ -690,10 +692,64 @@ canvas.addEventListener('touchstart', e => { e.preventDefault(); startDraw(e); }
 canvas.addEventListener('touchmove', e => { e.preventDefault(); moveDraw(e); }, {passive:false});
 canvas.addEventListener('touchend', e => { e.preventDefault(); endDraw(e); }, {passive:false});
 
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx*dx + dy*dy;
+  let t = lenSq === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const cx = x1 + t * dx, cy = y1 + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
+function hitTestElements(elements, x, y) {
+  let bestIdx = -1, bestDist = Infinity;
+  elements.forEach((el, idx) => {
+    let d = Infinity;
+    if (el.type === 'dim' || el.type === 'arrow') {
+      d = distToSegment(x, y, el.x1, el.y1, el.x2, el.y2);
+    } else if (el.type === 'rect') {
+      d = Math.min(
+        distToSegment(x, y, el.x1, el.y1, el.x2, el.y1),
+        distToSegment(x, y, el.x2, el.y1, el.x2, el.y2),
+        distToSegment(x, y, el.x2, el.y2, el.x1, el.y2),
+        distToSegment(x, y, el.x1, el.y2, el.x1, el.y1)
+      );
+    } else if (el.type === 'pen' && el.points && el.points.length) {
+      if (el.points.length === 1) {
+        d = Math.hypot(x - el.points[0].x, y - el.points[0].y);
+      } else {
+        for (let i = 0; i < el.points.length - 1; i++) {
+          d = Math.min(d, distToSegment(x, y, el.points[i].x, el.points[i].y, el.points[i+1].x, el.points[i+1].y));
+        }
+      }
+    } else if (el.type === 'text') {
+      d = Math.hypot(x - el.x, y - (el.y - 8));
+    }
+    if (d < bestDist) { bestDist = d; bestIdx = idx; }
+  });
+  return { idx: bestIdx, dist: bestDist };
+}
+
 function startDraw(e) {
   if (!activePhoto()) return;
   const pos = getPos(e);
   startX = pos.x; startY = pos.y;
+
+  if (currentTool === 'delete') {
+    isDrawing = false;
+    const p = activePhoto();
+    const hit = hitTestElements(p.elements, pos.x, pos.y);
+    const threshold = 24;
+    if (hit.idx >= 0 && hit.dist <= threshold) {
+      p.elements.splice(hit.idx, 1);
+      redraw();
+      showToast('선택한 항목을 삭제했어요');
+    } else {
+      showToast('지울 항목에 좀 더 가까이 탭해주세요');
+    }
+    return;
+  }
+
   isDrawing = true;
   if (currentTool === 'pen') { penPoints = [{x:startX,y:startY}]; }
   if (currentTool === 'text') {
