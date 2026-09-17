@@ -277,6 +277,7 @@
   .record-card .rc-actions { display: flex; gap: 6px; margin-top: 12px; }
   .rc-btn { padding: 7px 14px; border-radius: 6px; border: none; font-size: 0.9rem; cursor: pointer; }
   .rc-btn-view { background: #e5e5ea; color: #333; }
+  .rc-btn-share { background: #e3f0ff; color: #1a5fb4; }
   .rc-btn-del { background: #fde2e7; color: #c73652; }
 
   /* 뷰어 */
@@ -322,6 +323,8 @@
   #viewerCanvas { max-width: 100%; border-radius: 8px; }
   .viewer-info { background: #ffffff; padding: 16px; border-top: 1px solid #e5e5ea; }
   .viewer-info p { font-size: 1rem; color: #333; margin-bottom: 6px; }
+  .viewer-share-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .viewer-share-row .btn { padding: 12px; font-size: 0.95rem; }
 
   .empty-state { text-align: center; padding: 50px 20px; color: #aaa; }
   .empty-state .ei { font-size: 3rem; margin-bottom: 10px; }
@@ -509,7 +512,13 @@
   <div id="viewer-canvas-wrap">
     <canvas id="viewerCanvas"></canvas>
   </div>
-  <div class="viewer-info" id="viewerInfo"></div>
+  <div class="viewer-info">
+    <div class="viewer-share-row">
+      <button class="btn btn-secondary" onclick="shareCurrentViewerPhoto()">📤 이 사진 공유</button>
+      <button class="btn btn-primary" onclick="shareAllViewerPhotos()">📤 전체 사진 공유</button>
+    </div>
+    <div id="viewerInfo"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -973,6 +982,7 @@ function renderRecords(records) {
       <div class="rc-room">🚪 ${escapeHtml(r.roomType)||''} ${pCount ? `| 📷 ${pCount}장` : ''}</div>
       <div class="rc-actions">
         <button class="rc-btn rc-btn-view" onclick="viewRecord('${r.id}')">🔍 상세보기</button>
+        <button class="rc-btn rc-btn-share" onclick="shareRecordById('${r.id}')">📤 공유</button>
         <button class="rc-btn rc-btn-del" onclick="deleteRecord('${r.id}')">🗑️ 삭제</button>
       </div>
     </div>`;
@@ -994,8 +1004,70 @@ async function deleteRecord(id) {
   showToast('삭제 완료');
 }
 
+// 공유하기
+function getPhotoListForRecord(r) {
+  if (Array.isArray(r.photos) && r.photos.length > 0) return r.photos;
+  if (r.imageData) return [{ label: '사진', imageData: r.imageData }];
+  return [];
+}
+
+function safeFileName(str) {
+  return String(str || '사진').replace(/[\\/:*?"<>|]/g, '_');
+}
+
+async function shareImages(items, titleText) {
+  if (!items || items.length === 0) { showToast('공유할 사진이 없어요'); return; }
+  try {
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      const res = await fetch(items[i].imageData);
+      const blob = await res.blob();
+      files.push(new File([blob], `${safeFileName(items[i].label || ('사진' + (i+1)))}.jpg`, { type: 'image/jpeg' }));
+    }
+    if (navigator.canShare && navigator.canShare({ files })) {
+      await navigator.share({ files, title: titleText || '실측 사진' });
+    } else {
+      showToast('이 브라우저는 사진 공유를 지원하지 않아 다운로드로 대신할게요');
+      downloadImages(items);
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      showToast('공유 실패: ' + e.message);
+    }
+  }
+}
+
+function downloadImages(items) {
+  items.forEach((item, i) => {
+    const a = document.createElement('a');
+    a.href = item.imageData;
+    a.download = `${safeFileName(item.label || ('사진' + (i+1)))}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+}
+
+function shareRecordById(id) {
+  const r = allRecords.find(x => x.id === id);
+  if (!r) return;
+  const photoList = getPhotoListForRecord(r);
+  shareImages(photoList, `${r.customerName} 실측사진`);
+}
+
+function shareCurrentViewerPhoto() {
+  const item = currentViewerPhotos[currentViewerIndex];
+  if (!item) { showToast('공유할 사진이 없어요'); return; }
+  shareImages([item], item.label || '실측 사진');
+}
+
+function shareAllViewerPhotos() {
+  shareImages(currentViewerPhotos, '실측 사진');
+}
+
 // 뷰어 (사진 여러 장 탭으로 전환)
 let currentViewerPhotos = [];
+let currentViewerIndex = 0;
 
 function viewRecord(id) {
   const r = allRecords.find(x => x.id === id);
@@ -1009,13 +1081,7 @@ function viewRecord(id) {
     <p style="color:#999;font-size:0.85rem;margin-top:6px;">📅 ${date}</p>
   `;
 
-  let photoList = [];
-  if (Array.isArray(r.photos) && r.photos.length > 0) {
-    photoList = r.photos;
-  } else if (r.imageData) {
-    photoList = [{ label: '사진', imageData: r.imageData }];
-  }
-  renderViewerGallery(photoList);
+  renderViewerGallery(getPhotoListForRecord(r));
 
   document.getElementById('viewer-overlay').classList.add('show');
 }
@@ -1049,6 +1115,7 @@ function renderViewerGallery(photoList) {
 function drawViewerPhoto(idx) {
   const item = currentViewerPhotos[idx];
   if (!item) return;
+  currentViewerIndex = idx;
   document.querySelectorAll('.viewer-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
 
   const vCanvas = document.getElementById('viewerCanvas');
