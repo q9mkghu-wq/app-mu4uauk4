@@ -8,71 +8,124 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+  body { font-family: 'Segoe UI', sans-serif; background: #ffffff; color: #1a1a1a; min-height: 100vh; font-size: 17px; }
 
   header {
-    background: linear-gradient(135deg, #16213e, #0f3460);
-    padding: 15px 20px;
+    background: #ffffff;
+    padding: 18px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    border-bottom: 3px solid #e94560;
   }
-  header h1 { font-size: 1.3rem; color: #e94560; }
-  header span { font-size: 0.8rem; color: #aaa; }
+  header h1 { font-size: 1.6rem; color: #e94560; }
+  header span { font-size: 0.95rem; color: #666; }
 
   .nav-tabs {
     display: flex;
-    background: #16213e;
-    border-bottom: 2px solid #0f3460;
+    background: #ffffff;
+    border-bottom: 2px solid #e5e5ea;
   }
   .nav-tab {
     flex: 1;
-    padding: 12px;
+    padding: 14px;
     text-align: center;
     cursor: pointer;
-    font-size: 0.85rem;
-    color: #aaa;
+    font-size: 1.05rem;
+    color: #888;
     transition: all 0.2s;
   }
-  .nav-tab.active { color: #e94560; border-bottom: 2px solid #e94560; background: #1a1a2e; }
+  .nav-tab.active { color: #e94560; border-bottom: 3px solid #e94560; background: #fff5f6; font-weight: bold; }
 
   .page { display: none; padding: 15px; }
   .page.active { display: block; }
 
-  /* 새 실측 페이지 */
   .section-title {
-    font-size: 0.9rem;
+    font-size: 1.1rem;
     color: #e94560;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-weight: bold;
   }
-  .form-group { margin-bottom: 12px; }
-  .form-group label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 0.95rem; color: #555; margin-bottom: 6px; }
   .form-group input, .form-group textarea, .form-group select {
     width: 100%;
-    background: #16213e;
-    border: 1px solid #0f3460;
-    color: #eee;
-    padding: 10px;
+    background: #f5f5f7;
+    border: 1px solid #d8d8dc;
+    color: #1a1a1a;
+    padding: 12px;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
   }
   .form-group textarea { resize: vertical; min-height: 60px; }
 
   .upload-area {
-    border: 2px dashed #0f3460;
+    border: 2px dashed #d8d8dc;
     border-radius: 12px;
-    padding: 30px;
+    padding: 34px;
     text-align: center;
     cursor: pointer;
     margin-bottom: 15px;
     transition: all 0.2s;
+    background: #fafafc;
   }
   .upload-area:hover { border-color: #e94560; }
-  .upload-area .icon { font-size: 2rem; margin-bottom: 8px; }
-  .upload-area p { font-size: 0.85rem; color: #aaa; }
+  .upload-area .icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .upload-area p { font-size: 1rem; color: #555; }
+
+  /* 사진 썸네일 스트립 */
+  .photo-strip {
+    display: none;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .photo-thumb { position: relative; flex: 0 0 auto; width: 80px; }
+  .photo-thumb img {
+    width: 80px; height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid #d8d8dc;
+    display: block;
+    cursor: pointer;
+  }
+  .photo-thumb.active img { border-color: #e94560; }
+  .photo-thumb .pt-del {
+    position: absolute;
+    top: -6px; right: -6px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    font-size: 0.7rem;
+    cursor: pointer;
+    line-height: 22px;
+    padding: 0;
+  }
+  .photo-thumb .pt-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: center;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .photo-thumb.active .pt-label { color: #e94560; font-weight: bold; }
+  .photo-add { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+  .photo-add .pt-plus {
+    width: 80px; height: 80px;
+    border: 2px dashed #d8d8dc;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    color: #999;
+    background: #fafafc;
+  }
+  .photo-add:hover .pt-plus { border-color: #e94560; color: #e94560; }
 
   /* 캔버스 에디터 */
   #canvas-container {
@@ -94,17 +147,17 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 12px;
-    background: #16213e;
+    background: #f5f5f7;
     padding: 10px;
     border-radius: 10px;
   }
   .tool-btn {
-    padding: 7px 12px;
-    border: 1px solid #0f3460;
+    padding: 9px 14px;
+    border: 1px solid #d8d8dc;
     border-radius: 8px;
-    background: #1a1a2e;
-    color: #ccc;
-    font-size: 0.78rem;
+    background: #ffffff;
+    color: #333;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
   }
@@ -114,20 +167,20 @@
 
   .color-options {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     margin-bottom: 10px;
   }
   .color-dot {
-    width: 24px; height: 24px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 2px solid #ddd;
     transition: transform 0.15s;
   }
-  .color-dot.selected { border-color: #fff; transform: scale(1.2); }
+  .color-dot.selected { border-color: #1a1a1a; transform: scale(1.2); }
 
-  .size-slider { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.8rem; color: #aaa; }
+  .size-slider { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.95rem; color: #555; }
   .size-slider input { flex: 1; }
 
   /* 치수 입력 모달 */
@@ -135,53 +188,54 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.5);
     z-index: 100;
     justify-content: center;
     align-items: center;
   }
   .modal-overlay.show { display: flex; }
   .modal {
-    background: #16213e;
+    background: #ffffff;
     border-radius: 16px;
     padding: 25px;
     width: 90%;
     max-width: 380px;
-    border: 1px solid #0f3460;
+    border: 1px solid #e5e5ea;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
   }
-  .modal h3 { color: #e94560; margin-bottom: 15px; }
+  .modal h3 { color: #e94560; margin-bottom: 15px; font-size: 1.2rem; }
   .modal input {
     width: 100%;
-    background: #1a1a2e;
-    border: 1px solid #0f3460;
-    color: #eee;
-    padding: 10px;
+    background: #f5f5f7;
+    border: 1px solid #d8d8dc;
+    color: #1a1a1a;
+    padding: 12px;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     margin-bottom: 10px;
   }
   .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
   .btn {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: bold;
     transition: opacity 0.2s;
   }
   .btn-primary { background: #e94560; color: #fff; }
-  .btn-secondary { background: #0f3460; color: #ccc; }
+  .btn-secondary { background: #e5e5ea; color: #444; }
   .btn:hover { opacity: 0.85; }
   .btn-save {
     width: 100%;
-    padding: 14px;
+    padding: 16px;
     background: linear-gradient(135deg, #e94560, #c73652);
     color: #fff;
     border: none;
     border-radius: 10px;
-    font-size: 1rem;
+    font-size: 1.15rem;
     font-weight: bold;
     cursor: pointer;
     margin-top: 15px;
@@ -196,33 +250,34 @@
   }
   .search-bar input {
     flex: 1;
-    background: #16213e;
-    border: 1px solid #0f3460;
-    color: #eee;
-    padding: 10px;
+    background: #f5f5f7;
+    border: 1px solid #d8d8dc;
+    color: #1a1a1a;
+    padding: 12px;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
   }
 
   .record-card {
-    background: #16213e;
-    border: 1px solid #0f3460;
+    background: #ffffff;
+    border: 1px solid #e5e5ea;
     border-radius: 12px;
-    padding: 15px;
+    padding: 16px;
     margin-bottom: 12px;
     cursor: pointer;
     transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   }
   .record-card:hover { border-color: #e94560; }
   .record-card .rc-header { display: flex; justify-content: space-between; align-items: flex-start; }
-  .record-card .rc-name { font-size: 1rem; font-weight: bold; color: #fff; }
-  .record-card .rc-date { font-size: 0.75rem; color: #888; }
-  .record-card .rc-addr { font-size: 0.8rem; color: #aaa; margin-top: 4px; }
-  .record-card .rc-room { font-size: 0.75rem; color: #e94560; margin-top: 5px; }
-  .record-card .rc-actions { display: flex; gap: 6px; margin-top: 10px; }
-  .rc-btn { padding: 5px 12px; border-radius: 6px; border: none; font-size: 0.78rem; cursor: pointer; }
-  .rc-btn-view { background: #0f3460; color: #ccc; }
-  .rc-btn-del { background: #4a1528; color: #e94560; }
+  .record-card .rc-name { font-size: 1.15rem; font-weight: bold; color: #1a1a1a; }
+  .record-card .rc-date { font-size: 0.85rem; color: #999; }
+  .record-card .rc-addr { font-size: 0.95rem; color: #555; margin-top: 5px; }
+  .record-card .rc-room { font-size: 0.9rem; color: #e94560; margin-top: 6px; font-weight: bold; }
+  .record-card .rc-actions { display: flex; gap: 6px; margin-top: 12px; }
+  .rc-btn { padding: 7px 14px; border-radius: 6px; border: none; font-size: 0.9rem; cursor: pointer; }
+  .rc-btn-view { background: #e5e5ea; color: #333; }
+  .rc-btn-del { background: #fde2e7; color: #c73652; }
 
   /* 뷰어 */
   #viewer-overlay {
@@ -235,60 +290,53 @@
   }
   #viewer-overlay.show { display: flex; }
   .viewer-header {
-    background: #16213e;
-    padding: 12px 15px;
+    background: #ffffff;
+    padding: 14px 15px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    border-bottom: 2px solid #e5e5ea;
   }
-  .viewer-header h2 { font-size: 1rem; color: #e94560; }
-  .viewer-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+  .viewer-header h2 { font-size: 1.1rem; color: #e94560; }
+  .viewer-close { background: none; border: none; color: #333; font-size: 1.6rem; cursor: pointer; }
+  .viewer-photo-tabs {
+    display: none;
+    gap: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e5ea;
+  }
+  .viewer-tab {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    color: #555;
+    background: #f0f0f2;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .viewer-tab.active { background: #e94560; color: #fff; }
   #viewer-canvas-wrap { flex: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 10px; }
   #viewerCanvas { max-width: 100%; border-radius: 8px; }
-  .viewer-info { background: #16213e; padding: 15px; }
-  .viewer-info p { font-size: 0.85rem; color: #ccc; margin-bottom: 4px; }
+  .viewer-info { background: #ffffff; padding: 16px; border-top: 1px solid #e5e5ea; }
+  .viewer-info p { font-size: 1rem; color: #333; margin-bottom: 6px; }
 
-  .empty-state { text-align: center; padding: 50px 20px; color: #555; }
+  .empty-state { text-align: center; padding: 50px 20px; color: #aaa; }
   .empty-state .ei { font-size: 3rem; margin-bottom: 10px; }
 
-  .dimensions-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .dim-box {
-    background: #16213e;
-    border: 1px solid #0f3460;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-  }
-  .dim-box label { display: block; font-size: 0.7rem; color: #aaa; margin-bottom: 4px; }
-  .dim-box input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid #0f3460;
-    color: #fff;
-    text-align: center;
-    font-size: 0.9rem;
-    padding: 3px 0;
-  }
-  .dim-box .unit { font-size: 0.65rem; color: #e94560; margin-top: 2px; }
-
   .instructions {
-    background: #16213e;
-    border-left: 3px solid #e94560;
-    padding: 10px;
+    background: #fff5f6;
+    border-left: 4px solid #e94560;
+    padding: 12px;
     border-radius: 0 8px 8px 0;
-    margin-bottom: 12px;
-    font-size: 0.78rem;
-    color: #aaa;
-    line-height: 1.6;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.7;
   }
 
-  /* 스냅샷 저장 토스트 */
   .toast {
     position: fixed;
     bottom: 20px;
@@ -296,16 +344,19 @@
     transform: translateX(-50%);
     background: #e94560;
     color: #fff;
-    padding: 10px 20px;
+    padding: 12px 22px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     z-index: 300;
     opacity: 0;
     transition: opacity 0.3s;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
   .toast.show { opacity: 1; }
 
-  .loading { text-align: center; padding: 30px; color: #888; }
+  .loading { text-align: center; padding: 30px; color: #999; }
 </style>
 </head>
 <body>
@@ -324,7 +375,7 @@
 <div class="page active" id="page-new">
 
   <!-- 고객 정보 -->
-  <div style="background:#16213e;border-radius:12px;padding:15px;margin-bottom:15px;border:1px solid #0f3460;">
+  <div style="background:#ffffff;border-radius:12px;padding:16px;margin-bottom:15px;border:1px solid #e5e5ea;">
     <div class="section-title">👤 고객 정보</div>
     <div class="form-group">
       <label>고객명</label>
@@ -350,50 +401,30 @@
     </div>
   </div>
 
-  <!-- 기본 치수 -->
-  <div style="background:#16213e;border-radius:12px;padding:15px;margin-bottom:15px;border:1px solid #0f3460;">
-    <div class="section-title">📏 기본 치수 (mm)</div>
-    <div class="dimensions-grid">
-      <div class="dim-box">
-        <label>가로 (W)</label>
-        <input type="number" id="dimW" placeholder="2400">
-        <div class="unit">mm</div>
-      </div>
-      <div class="dim-box">
-        <label>세로 (D)</label>
-        <input type="number" id="dimD" placeholder="600">
-        <div class="unit">mm</div>
-      </div>
-      <div class="dim-box">
-        <label>높이 (H)</label>
-        <input type="number" id="dimH" placeholder="2200">
-        <div class="unit">mm</div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>메모 (장애물, 창문, 특이사항 등)</label>
-      <textarea id="dimMemo" placeholder="에어컨 배관 우측 상단 150mm 돌출, 창문 하단 800mm ..."></textarea>
-    </div>
-  </div>
-
   <!-- 사진 업로드 & 캔버스 -->
-  <div style="background:#16213e;border-radius:12px;padding:15px;margin-bottom:15px;border:1px solid #0f3460;">
-    <div class="section-title">📷 사진 실측 도면</div>
+  <div style="background:#ffffff;border-radius:12px;padding:16px;margin-bottom:15px;border:1px solid #e5e5ea;">
+    <div class="section-title">📷 사진 실측 도면 (부위별로 여러 장 가능)</div>
 
-    <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoInput').click()">
+    <div class="photo-strip" id="photoStrip"></div>
+
+    <div class="upload-area" id="uploadArea" onclick="triggerUpload()">
       <div class="icon">📷</div>
-      <p>사진을 탭하여 업로드<br><span style="font-size:0.75rem;color:#666">카메라/갤러리에서 선택</span></p>
+      <p>사진을 탭하여 업로드<br><span style="font-size:0.85rem;color:#999">벽/천장/문 옆 등 부위별로 여러 장 찍어서 추가하세요</span></p>
     </div>
     <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
 
     <div id="editor-section" style="display:none;">
 
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>현재 사진 이름 (예: 좌측벽, 천장, 문 옆 등)</label>
+        <input type="text" id="photoLabelInput" placeholder="예: 좌측벽" oninput="updateActiveLabel()">
+      </div>
+
       <div class="instructions">
-        💡 <b>사용법:</b> 도구 선택 → 캔버스에서 드래그로 선 그리기 → 치수 숫자 자동 입력 팝업<br>
+        💡 <b>사용법:</b> 썸네일을 눌러 사진을 바꾸고, 사진마다 따로 치수를 그릴 수 있어요.<br>
         • <b>치수선</b>: 드래그 → 팝업에서 mm 입력<br>
-        • <b>화살표</b>: 방향 표시<br>
-        • <b>텍스트</b>: 탭 위치에 글자 입력<br>
-        • <b>지우개</b>: 마지막 요소 삭제
+        • <b>화살표</b>: 방향 표시 &nbsp; • <b>텍스트</b>: 탭 위치에 글자 입력<br>
+        • 사진을 다 그렸으면 썸네일의 <b>＋</b>를 눌러 다음 부위 사진을 추가하세요
       </div>
 
       <!-- 도구바 -->
@@ -404,18 +435,18 @@
         <button class="tool-btn" id="tool-text" onclick="setTool('text')">🔤 텍스트</button>
         <button class="tool-btn" id="tool-pen" onclick="setTool('pen')">✏️ 펜</button>
         <button class="tool-btn danger" onclick="undoLast()">↩️ 실행취소</button>
-        <button class="tool-btn danger" onclick="clearAll()">🗑️ 전체삭제</button>
+        <button class="tool-btn danger" onclick="clearAll()">🗑️ 이 사진 지우기</button>
       </div>
 
       <!-- 색상 & 크기 -->
-      <div style="background:#1a1a2e;padding:10px;border-radius:8px;margin-bottom:10px;">
-        <div style="font-size:0.75rem;color:#aaa;margin-bottom:6px;">색상 선택</div>
+      <div style="background:#f5f5f7;padding:12px;border-radius:8px;margin-bottom:10px;">
+        <div style="font-size:0.9rem;color:#555;margin-bottom:8px;">색상 선택</div>
         <div class="color-options" id="colorOptions">
           <div class="color-dot selected" style="background:#ff4444;" data-color="#ff4444" onclick="setColor(this)"></div>
-          <div class="color-dot" style="background:#44ff44;" data-color="#44ff44" onclick="setColor(this)"></div>
-          <div class="color-dot" style="background:#4488ff;" data-color="#4488ff" onclick="setColor(this)"></div>
-          <div class="color-dot" style="background:#ffff44;" data-color="#ffff44" onclick="setColor(this)"></div>
-          <div class="color-dot" style="background:#ffffff;" data-color="#ffffff" onclick="setColor(this)"></div>
+          <div class="color-dot" style="background:#44aa44;" data-color="#44aa44" onclick="setColor(this)"></div>
+          <div class="color-dot" style="background:#3366ff;" data-color="#3366ff" onclick="setColor(this)"></div>
+          <div class="color-dot" style="background:#ddbb00;" data-color="#ddbb00" onclick="setColor(this)"></div>
+          <div class="color-dot" style="background:#111111;" data-color="#111111" onclick="setColor(this)"></div>
           <div class="color-dot" style="background:#ff8800;" data-color="#ff8800" onclick="setColor(this)"></div>
         </div>
         <div class="size-slider">
@@ -446,7 +477,7 @@
 <div class="modal-overlay" id="dimModal">
   <div class="modal">
     <h3>📏 치수 입력</h3>
-    <p style="font-size:0.8rem;color:#aaa;margin-bottom:12px;">그린 선의 치수(mm)를 입력하세요</p>
+    <p style="font-size:0.9rem;color:#666;margin-bottom:12px;">그린 선의 치수(mm)를 입력하세요</p>
     <input type="number" id="dimInput" placeholder="예: 2400 (mm)" autofocus>
     <input type="text" id="dimLabel" placeholder="레이블 (예: 가로, W, 폭 등)">
     <div class="modal-btns">
@@ -474,6 +505,7 @@
     <h2 id="viewerTitle">실측 상세보기</h2>
     <button class="viewer-close" onclick="closeViewer()">✕</button>
   </div>
+  <div class="viewer-photo-tabs" id="viewerPhotoTabs"></div>
   <div id="viewer-canvas-wrap">
     <canvas id="viewerCanvas"></canvas>
   </div>
@@ -490,18 +522,25 @@ const db = firebase.firestore();
 let currentTool = 'dim';
 let currentColor = '#ff4444';
 let currentLineWidth = 2;
-let elements = [];
 let isDrawing = false;
 let startX, startY, currentX, currentY;
 let penPoints = [];
-let backgroundImage = null;
-let canvasWidth = 0, canvasHeight = 0;
 let pendingElement = null;
 let pendingTextPos = null;
 let allRecords = [];
 
+// 사진 여러 장 관리: 각 항목 = { img, w, h, elements: [], label }
+let photos = [];
+let activePhotoIndex = -1;
+
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
+
+function activePhoto() { return activePhotoIndex >= 0 ? photos[activePhotoIndex] : null; }
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
 
 // 라인 두께 슬라이더
 document.getElementById('lineWidth').addEventListener('input', function() {
@@ -522,31 +561,99 @@ function setColor(el) {
   el.classList.add('selected');
 }
 
-// 파일 업로드
+function triggerUpload() {
+  document.getElementById('photoInput').click();
+}
+
+// 파일 업로드 (여러 번 눌러서 여러 장 추가)
 document.getElementById('photoInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
+  e.target.value = ''; // 같은 파일도 다시 선택 가능하도록 초기화
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(ev) {
     const img = new Image();
     img.onload = function() {
       const container = document.getElementById('canvas-container');
-      const maxW = container.clientWidth || window.innerWidth - 30;
+      const maxW = container.clientWidth || (window.innerWidth - 30);
       const scale = maxW / img.width;
-      canvasWidth = maxW;
-      canvasHeight = img.height * scale;
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-      backgroundImage = img;
-      elements = [];
-      redraw();
-      document.getElementById('editor-section').style.display = 'block';
+      const w = maxW;
+      const h = img.height * scale;
+
+      photos.push({ img, w, h, elements: [], label: `사진 ${photos.length + 1}` });
+      activePhotoIndex = photos.length - 1;
+
       document.getElementById('uploadArea').style.display = 'none';
+      document.getElementById('editor-section').style.display = 'block';
+
+      loadActivePhotoIntoCanvas();
+      renderPhotoStrip();
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 });
+
+function loadActivePhotoIntoCanvas() {
+  const p = activePhoto();
+  if (!p) return;
+  canvas.width = p.w;
+  canvas.height = p.h;
+  document.getElementById('photoLabelInput').value = p.label;
+  redraw();
+}
+
+function selectPhoto(i) {
+  if (i < 0 || i >= photos.length) return;
+  activePhotoIndex = i;
+  loadActivePhotoIntoCanvas();
+  renderPhotoStrip();
+}
+
+function updateActiveLabel() {
+  const p = activePhoto();
+  if (!p) return;
+  const val = document.getElementById('photoLabelInput').value.trim();
+  p.label = val || `사진 ${activePhotoIndex + 1}`;
+  renderPhotoStrip();
+}
+
+function removePhoto(i) {
+  if (!confirm('이 사진과 그 위에 그린 치수를 삭제할까요?')) return;
+  photos.splice(i, 1);
+  if (photos.length === 0) {
+    activePhotoIndex = -1;
+    document.getElementById('uploadArea').style.display = 'block';
+    document.getElementById('editor-section').style.display = 'none';
+  } else {
+    if (activePhotoIndex >= photos.length) activePhotoIndex = photos.length - 1;
+    else if (i < activePhotoIndex) activePhotoIndex -= 1;
+    if (activePhotoIndex < 0) activePhotoIndex = 0;
+    loadActivePhotoIntoCanvas();
+  }
+  renderPhotoStrip();
+}
+
+function renderPhotoStrip() {
+  const strip = document.getElementById('photoStrip');
+  if (photos.length === 0) {
+    strip.innerHTML = '';
+    strip.style.display = 'none';
+    return;
+  }
+  strip.style.display = 'flex';
+  strip.innerHTML = photos.map((p, i) => `
+    <div class="photo-thumb ${i === activePhotoIndex ? 'active' : ''}">
+      <img src="${p.img.src}" onclick="selectPhoto(${i})">
+      <button class="pt-del" onclick="removePhoto(${i})">✕</button>
+      <div class="pt-label">${escapeHtml(p.label)}</div>
+    </div>
+  `).join('') + `
+    <div class="photo-thumb photo-add" onclick="triggerUpload()">
+      <div class="pt-plus">＋</div>
+      <div class="pt-label">사진 추가</div>
+    </div>`;
+}
 
 // 터치/마우스 이벤트
 function getPos(e) {
@@ -575,6 +682,7 @@ canvas.addEventListener('touchmove', e => { e.preventDefault(); moveDraw(e); }, 
 canvas.addEventListener('touchend', e => { e.preventDefault(); endDraw(e); }, {passive:false});
 
 function startDraw(e) {
+  if (!activePhoto()) return;
   const pos = getPos(e);
   startX = pos.x; startY = pos.y;
   isDrawing = true;
@@ -589,7 +697,7 @@ function startDraw(e) {
 }
 
 function moveDraw(e) {
-  if (!isDrawing) return;
+  if (!isDrawing || !activePhoto()) return;
   const pos = getPos(e);
   currentX = pos.x; currentY = pos.y;
   if (currentTool === 'pen') { penPoints.push({x:currentX,y:currentY}); }
@@ -598,9 +706,8 @@ function moveDraw(e) {
 }
 
 function endDraw(e) {
-  if (!isDrawing) return;
+  if (!isDrawing || !activePhoto()) return;
   isDrawing = false;
-  const pos = e.changedTouches ? {x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY} : getPos(e);
   if (e.changedTouches) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -609,8 +716,10 @@ function endDraw(e) {
     currentY = (e.changedTouches[0].clientY - rect.top) * scaleY;
   }
 
+  const p = activePhoto();
+
   if (currentTool === 'pen') {
-    elements.push({ type:'pen', points: [...penPoints], color: currentColor, lineWidth: currentLineWidth });
+    p.elements.push({ type:'pen', points: [...penPoints], color: currentColor, lineWidth: currentLineWidth });
     redraw();
   } else if (currentTool === 'dim') {
     pendingElement = { type:'dim', x1:startX, y1:startY, x2:currentX, y2:currentY, color: currentColor, lineWidth: currentLineWidth };
@@ -619,10 +728,10 @@ function endDraw(e) {
     document.getElementById('dimModal').classList.add('show');
     document.getElementById('dimInput').focus();
   } else if (currentTool === 'arrow') {
-    elements.push({ type:'arrow', x1:startX, y1:startY, x2:currentX, y2:currentY, color: currentColor, lineWidth: currentLineWidth });
+    p.elements.push({ type:'arrow', x1:startX, y1:startY, x2:currentX, y2:currentY, color: currentColor, lineWidth: currentLineWidth });
     redraw();
   } else if (currentTool === 'rect') {
-    elements.push({ type:'rect', x1:startX, y1:startY, x2:currentX, y2:currentY, color: currentColor, lineWidth: currentLineWidth });
+    p.elements.push({ type:'rect', x1:startX, y1:startY, x2:currentX, y2:currentY, color: currentColor, lineWidth: currentLineWidth });
     redraw();
   }
 }
@@ -630,10 +739,11 @@ function endDraw(e) {
 function confirmDim() {
   const val = document.getElementById('dimInput').value;
   const lbl = document.getElementById('dimLabel').value || '';
-  if (pendingElement) {
+  const p = activePhoto();
+  if (pendingElement && p) {
     pendingElement.value = val ? parseInt(val) : null;
     pendingElement.label = lbl;
-    elements.push(pendingElement);
+    p.elements.push(pendingElement);
     pendingElement = null;
     redraw();
   }
@@ -646,8 +756,9 @@ function cancelDim() {
 }
 function confirmText() {
   const val = document.getElementById('textInput').value;
-  if (val && pendingTextPos) {
-    elements.push({ type:'text', x:pendingTextPos.x, y:pendingTextPos.y, text:val, color: currentColor, lineWidth: currentLineWidth });
+  const p = activePhoto();
+  if (val && pendingTextPos && p) {
+    p.elements.push({ type:'text', x:pendingTextPos.x, y:pendingTextPos.y, text:val, color: currentColor, lineWidth: currentLineWidth });
     redraw();
   }
   pendingTextPos = null;
@@ -658,15 +769,24 @@ function cancelText() {
   document.getElementById('textModal').classList.remove('show');
 }
 
-function undoLast() { elements.pop(); redraw(); }
-function clearAll() { if(confirm('모든 그림을 삭제할까요?')) { elements = []; redraw(); } }
+function undoLast() {
+  const p = activePhoto();
+  if (!p) return;
+  p.elements.pop();
+  redraw();
+}
+function clearAll() {
+  const p = activePhoto();
+  if (!p) return;
+  if (confirm('이 사진에 그린 모든 그림을 삭제할까요?')) { p.elements = []; redraw(); }
+}
 
 function redraw() {
+  const p = activePhoto();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (backgroundImage) {
-    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  }
-  elements.forEach(el => drawElement(ctx, el));
+  if (!p) return;
+  ctx.drawImage(p.img, 0, 0, canvas.width, canvas.height);
+  p.elements.forEach(el => drawElement(ctx, el));
 }
 
 function drawPreview() {
@@ -700,7 +820,7 @@ function drawElement(c, el) {
     const fs = Math.max(14, (el.lineWidth||2)*6);
     c.font = `bold ${fs}px sans-serif`;
     c.fillStyle = el.color || '#ff4444';
-    c.strokeStyle = 'rgba(0,0,0,0.8)';
+    c.strokeStyle = 'rgba(255,255,255,0.9)';
     c.lineWidth = 3;
     c.strokeText(el.text, el.x, el.y);
     c.fillText(el.text, el.x, el.y);
@@ -714,7 +834,6 @@ function drawDimLine(c, el) {
   const perpX = -Math.sin(angle) * 12;
   const perpY = Math.cos(angle) * 12;
 
-  // 보조선
   c.setLineDash([4,3]);
   c.beginPath();
   c.moveTo(el.x1 + perpX, el.y1 + perpY);
@@ -724,17 +843,15 @@ function drawDimLine(c, el) {
   c.stroke();
   c.setLineDash([]);
 
-  // 치수선 (화살표)
   drawArrow(c, el.x1, el.y1, el.x2, el.y2);
 
-  // 텍스트
   if (!el.isPreview && el.value) {
     const mx = (el.x1+el.x2)/2, my = (el.y1+el.y2)/2;
     const fs = Math.max(13, Math.min(18, len/5));
     c.font = `bold ${fs}px sans-serif`;
     const label = el.label ? `${el.label}: ${el.value}mm` : `${el.value}mm`;
     const tw = c.measureText(label).width;
-    c.fillStyle = 'rgba(0,0,0,0.75)';
+    c.fillStyle = 'rgba(255,255,255,0.85)';
     c.fillRect(mx - tw/2 - 4, my - fs - 2, tw + 8, fs + 8);
     c.fillStyle = el.color || '#ff4444';
     c.fillText(label, mx - tw/2, my + 2);
@@ -749,7 +866,6 @@ function drawArrow(c, x1, y1, x2, y2) {
   c.moveTo(x1,y1);
   c.lineTo(x2,y2);
   c.stroke();
-  // 화살촉 양쪽
   [0, Math.PI].forEach(offset => {
     const ax = (offset===0?x2:x1), ay = (offset===0?y2:y1);
     const a = (offset===0?angle:angle+Math.PI);
@@ -766,15 +882,27 @@ function drawArrow(c, x1, y1, x2, y2) {
 async function saveRecord() {
   const name = document.getElementById('customerName').value.trim();
   if (!name) { showToast('고객명을 입력해주세요'); return; }
+  if (photos.length === 0) { showToast('사진을 최소 1장 추가해주세요'); return; }
 
-  let imageData = '';
-  if (backgroundImage) {
-    const tmpCanvas = document.createElement('canvas');
-    tmpCanvas.width = canvas.width;
-    tmpCanvas.height = canvas.height;
-    const tmpCtx = tmpCanvas.getContext('2d');
-    tmpCtx.drawImage(canvas, 0, 0);
-    imageData = tmpCanvas.toDataURL('image/jpeg', 0.75);
+  showToast('저장 중...');
+
+  // 사진마다 그림을 하나의 이미지로 합쳐서 저장
+  const photoData = photos.map(p => {
+    const tmp = document.createElement('canvas');
+    tmp.width = p.w;
+    tmp.height = p.h;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(p.img, 0, 0, p.w, p.h);
+    p.elements.forEach(el => drawElement(tctx, el));
+    return {
+      label: p.label,
+      imageData: tmp.toDataURL('image/jpeg', 0.75)
+    };
+  });
+
+  const totalSize = photoData.reduce((s, p) => s + p.imageData.length, 0);
+  if (totalSize > 850000) {
+    showToast('⚠️ 사진 용량이 커서 저장이 실패할 수 있어요. 사진 장수를 줄여보세요.');
   }
 
   const record = {
@@ -782,35 +910,28 @@ async function saveRecord() {
     customerAddr: document.getElementById('customerAddr').value,
     customerPhone: document.getElementById('customerPhone').value,
     roomType: document.getElementById('roomType').value,
-    dimW: document.getElementById('dimW').value,
-    dimD: document.getElementById('dimD').value,
-    dimH: document.getElementById('dimH').value,
-    memo: document.getElementById('dimMemo').value,
-    imageData: imageData,
-    elements: JSON.stringify(elements),
+    photos: photoData,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   try {
-    showToast('저장 중...');
     await db.collection("apps/app-mu4uauk4/items").add(record);
     showToast('✅ 저장 완료!');
-    // 폼 초기화
-    document.getElementById('customerName').value = '';
-    document.getElementById('customerAddr').value = '';
-    document.getElementById('customerPhone').value = '';
-    document.getElementById('dimW').value = '';
-    document.getElementById('dimD').value = '';
-    document.getElementById('dimH').value = '';
-    document.getElementById('dimMemo').value = '';
-    elements = [];
-    backgroundImage = null;
-    document.getElementById('editor-section').style.display = 'none';
-    document.getElementById('uploadArea').style.display = 'block';
-    document.getElementById('photoInput').value = '';
+    resetForm();
   } catch(e) {
     showToast('저장 실패: ' + e.message);
   }
+}
+
+function resetForm() {
+  document.getElementById('customerName').value = '';
+  document.getElementById('customerAddr').value = '';
+  document.getElementById('customerPhone').value = '';
+  photos = [];
+  activePhotoIndex = -1;
+  document.getElementById('editor-section').style.display = 'none';
+  document.getElementById('uploadArea').style.display = 'block';
+  renderPhotoStrip();
 }
 
 // 목록 불러오기
@@ -828,6 +949,12 @@ function loadRecords() {
     });
 }
 
+function photoCount(r) {
+  if (Array.isArray(r.photos)) return r.photos.length;
+  if (r.imageData) return 1;
+  return 0;
+}
+
 function renderRecords(records) {
   const el = document.getElementById('recordList');
   if (records.length === 0) {
@@ -836,14 +963,14 @@ function renderRecords(records) {
   }
   el.innerHTML = records.map(r => {
     const date = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleDateString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+    const pCount = photoCount(r);
     return `<div class="record-card">
       <div class="rc-header">
-        <span class="rc-name">${r.customerName}</span>
+        <span class="rc-name">${escapeHtml(r.customerName)}</span>
         <span class="rc-date">${date}</span>
       </div>
-      <div class="rc-addr">📍 ${r.customerAddr||'주소 없음'} | 📞 ${r.customerPhone||'-'}</div>
-      <div class="rc-room">🚪 ${r.roomType||''} | W:${r.dimW||'-'}mm D:${r.dimD||'-'}mm H:${r.dimH||'-'}mm</div>
-      ${r.memo ? `<div style="font-size:0.75rem;color:#888;margin-top:4px;">📝 ${r.memo.substring(0,60)}${r.memo.length>60?'...':''}</div>` : ''}
+      <div class="rc-addr">📍 ${escapeHtml(r.customerAddr)||'주소 없음'} | 📞 ${escapeHtml(r.customerPhone)||'-'}</div>
+      <div class="rc-room">🚪 ${escapeHtml(r.roomType)||''} ${pCount ? `| 📷 ${pCount}장` : ''}</div>
       <div class="rc-actions">
         <button class="rc-btn rc-btn-view" onclick="viewRecord('${r.id}')">🔍 상세보기</button>
         <button class="rc-btn rc-btn-del" onclick="deleteRecord('${r.id}')">🗑️ 삭제</button>
@@ -867,6 +994,9 @@ async function deleteRecord(id) {
   showToast('삭제 완료');
 }
 
+// 뷰어 (사진 여러 장 탭으로 전환)
+let currentViewerPhotos = [];
+
 function viewRecord(id) {
   const r = allRecords.find(x => x.id === id);
   if (!r) return;
@@ -874,44 +1004,66 @@ function viewRecord(id) {
   document.getElementById('viewerTitle').textContent = `${r.customerName} - ${r.roomType||''}`;
   const date = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleDateString('ko-KR') : '-';
   document.getElementById('viewerInfo').innerHTML = `
-    <p>👤 <b>${r.customerName}</b> | 📞 ${r.customerPhone||'-'}</p>
-    <p>📍 ${r.customerAddr||'주소 없음'}</p>
-    <p>📐 W:${r.dimW||'-'}mm / D:${r.dimD||'-'}mm / H:${r.dimH||'-'}mm</p>
-    ${r.memo ? `<p>📝 ${r.memo}</p>` : ''}
-    <p style="color:#666;font-size:0.75rem;margin-top:6px;">📅 ${date}</p>
+    <p>👤 <b>${escapeHtml(r.customerName)}</b> | 📞 ${escapeHtml(r.customerPhone)||'-'}</p>
+    <p>📍 ${escapeHtml(r.customerAddr)||'주소 없음'}</p>
+    <p style="color:#999;font-size:0.85rem;margin-top:6px;">📅 ${date}</p>
   `;
+
+  let photoList = [];
+  if (Array.isArray(r.photos) && r.photos.length > 0) {
+    photoList = r.photos;
+  } else if (r.imageData) {
+    photoList = [{ label: '사진', imageData: r.imageData }];
+  }
+  renderViewerGallery(photoList);
+
+  document.getElementById('viewer-overlay').classList.add('show');
+}
+
+function renderViewerGallery(photoList) {
+  currentViewerPhotos = photoList;
+  const tabWrap = document.getElementById('viewerPhotoTabs');
+
+  if (photoList.length <= 1) {
+    tabWrap.style.display = 'none';
+    tabWrap.innerHTML = '';
+  } else {
+    tabWrap.style.display = 'flex';
+    tabWrap.innerHTML = photoList.map((p, i) =>
+      `<div class="viewer-tab ${i===0?'active':''}" onclick="drawViewerPhoto(${i})">${escapeHtml(p.label || ('사진 ' + (i+1)))}</div>`
+    ).join('');
+  }
 
   const vCanvas = document.getElementById('viewerCanvas');
   const vCtx = vCanvas.getContext('2d');
 
-  if (r.imageData) {
-    const img = new Image();
-    img.onload = function() {
-      const maxW = window.innerWidth - 20;
-      const scale = maxW / img.width;
-      vCanvas.width = maxW;
-      vCanvas.height = img.height * scale;
-      vCtx.drawImage(img, 0, 0, vCanvas.width, vCanvas.height);
-      // 요소 다시 그리기 (원본 비율로 스케일)
-      if (r.elements) {
-        try {
-          const els = JSON.parse(r.elements);
-          // 원본 캔버스 크기 추정
-          const savedW = vCanvas.width; // 실제로는 비율 맞게
-          els.forEach(el => drawElement(vCtx, el));
-        } catch(e) {}
-      }
-    };
-    img.src = r.imageData;
-  } else {
-    vCanvas.width = 100; vCanvas.height = 50;
-    vCtx.fillStyle = '#333';
-    vCtx.fillRect(0,0,100,50);
-    vCtx.fillStyle='#fff';
-    vCtx.fillText('사진 없음',10,30);
+  if (photoList.length === 0) {
+    vCanvas.width = 240; vCanvas.height = 90;
+    vCtx.fillStyle = '#333'; vCtx.fillRect(0,0,240,90);
+    vCtx.fillStyle = '#fff'; vCtx.font = '14px sans-serif'; vCtx.fillText('사진 없음', 90, 50);
+    return;
   }
+  drawViewerPhoto(0);
+}
 
-  document.getElementById('viewer-overlay').classList.add('show');
+function drawViewerPhoto(idx) {
+  const item = currentViewerPhotos[idx];
+  if (!item) return;
+  document.querySelectorAll('.viewer-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+
+  const vCanvas = document.getElementById('viewerCanvas');
+  const vCtx = vCanvas.getContext('2d');
+  const img = new Image();
+  img.onload = function() {
+    const wrap = document.getElementById('viewer-canvas-wrap');
+    const maxW = (wrap.clientWidth - 20) || (window.innerWidth - 20);
+    const scale = Math.min(1, maxW / img.width);
+    vCanvas.width = img.width * scale;
+    vCanvas.height = img.height * scale;
+    vCtx.clearRect(0,0,vCanvas.width,vCanvas.height);
+    vCtx.drawImage(img, 0, 0, vCanvas.width, vCanvas.height);
+  };
+  img.src = item.imageData;
 }
 
 function closeViewer() {
@@ -933,7 +1085,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// 모달 Enter 키
 document.getElementById('dimInput').addEventListener('keyup', e => { if(e.key==='Enter') confirmDim(); });
 document.getElementById('dimLabel').addEventListener('keyup', e => { if(e.key==='Enter') confirmDim(); });
 document.getElementById('textInput').addEventListener('keyup', e => { if(e.key==='Enter') confirmText(); });
