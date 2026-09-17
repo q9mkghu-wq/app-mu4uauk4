@@ -468,6 +468,11 @@
           <input type="range" id="lineWidth" min="1" max="8" value="2">
           <span id="lineWidthVal">2</span>
         </div>
+        <div class="size-slider">
+          <span>치수 글씨 크기</span>
+          <input type="range" id="dimFontSize" min="12" max="36" value="20">
+          <span id="dimFontSizeVal">20</span>
+        </div>
       </div>
 
       <div class="zoom-controls">
@@ -550,6 +555,7 @@ const db = firebase.firestore();
 let currentTool = 'dim';
 let currentColor = '#ff4444';
 let currentLineWidth = 2;
+let currentFontSize = 20;
 let isDrawing = false;
 let startX, startY, currentX, currentY;
 let penPoints = [];
@@ -577,6 +583,11 @@ function escapeHtml(str) {
 document.getElementById('lineWidth').addEventListener('input', function() {
   currentLineWidth = parseInt(this.value);
   document.getElementById('lineWidthVal').textContent = this.value;
+});
+
+document.getElementById('dimFontSize').addEventListener('input', function() {
+  currentFontSize = parseInt(this.value);
+  document.getElementById('dimFontSizeVal').textContent = this.value;
 });
 
 function setTool(t) {
@@ -889,6 +900,7 @@ function confirmDim() {
   if (pendingElement && p) {
     pendingElement.value = val ? parseInt(val) : null;
     pendingElement.label = lbl;
+    pendingElement.fontSize = currentFontSize;
     p.elements.push(pendingElement);
     pendingElement = null;
     redraw();
@@ -993,7 +1005,7 @@ function drawDimLine(c, el) {
 
   if (!el.isPreview && el.value) {
     const mx = (el.x1+el.x2)/2, my = (el.y1+el.y2)/2;
-    const fs = Math.max(13, Math.min(18, len/5));
+    const fs = el.fontSize || Math.max(13, Math.min(18, len/5));
     c.font = `bold ${fs}px sans-serif`;
     const label = el.label ? `${el.label}: ${el.value}mm` : `${el.value}mm`;
     const tw = c.measureText(label).width;
