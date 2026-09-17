@@ -131,16 +131,24 @@
   #canvas-container {
     position: relative;
     width: 100%;
+    max-height: 65vh;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: auto;
     background: #000;
     touch-action: none;
   }
   #mainCanvas {
-    width: 100%;
     display: block;
     cursor: crosshair;
   }
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .zoom-controls .tool-btn { padding: 8px 14px; }
+  .zoom-level-label { font-size: 0.9rem; color: #555; min-width: 46px; text-align: center; }
 
   .tool-bar {
     display: flex;
@@ -428,7 +436,15 @@
         • <b>치수선</b>: 드래그 → 팝업에서 mm 입력<br>
         • <b>화살표</b>: 방향 표시 &nbsp; • <b>텍스트</b>: 탭 위치에 글자 입력<br>
         • <b>개별삭제</b>: 지우고 싶은 선/화살표/텍스트를 탭하면 그것만 삭제돼요<br>
-        • <b>실행취소</b>: 방금 그린 것만 되돌려요 &nbsp; • 사진을 다 그렸으면 썸네일의 <b>＋</b>로 다음 사진 추가
+        • <b>실행취소</b>: 방금 그린 것만 되돌려요 &nbsp; • 사진을 다 그렸으면 썸네일의 <b>＋</b>로 다음 사진 추가<br>
+        • 정밀하게 그리려면 <b>➕</b>로 확대한 뒤, <b>🤚 이동</b> 도구로 화면을 옮겨가며 그리세요
+      </div>
+
+      <div class="zoom-controls">
+        <button class="tool-btn" onclick="zoomOut()">➖</button>
+        <span class="zoom-level-label" id="zoomLevelLabel">100%</span>
+        <button class="tool-btn" onclick="zoomIn()">➕</button>
+        <button class="tool-btn" onclick="zoomReset()">↺ 원래크기</button>
       </div>
 
       <!-- 도구바 -->
@@ -438,6 +454,7 @@
         <button class="tool-btn" id="tool-rect" onclick="setTool('rect')">⬜ 사각형</button>
         <button class="tool-btn" id="tool-text" onclick="setTool('text')">🔤 텍스트</button>
         <button class="tool-btn" id="tool-pen" onclick="setTool('pen')">✏️ 펜</button>
+        <button class="tool-btn" id="tool-pan" onclick="setTool('pan')">🤚 이동</button>
         <button class="tool-btn" id="tool-delete" onclick="setTool('delete')">🎯 개별삭제</button>
         <button class="tool-btn danger" onclick="undoLast()">↩️ 실행취소</button>
         <button class="tool-btn danger" onclick="clearAll()">🗑️ 이 사진 지우기</button>
@@ -540,9 +557,12 @@ let pendingElement = null;
 let pendingTextPos = null;
 let allRecords = [];
 
-// 사진 여러 장 관리: 각 항목 = { img, w, h, elements: [], label }
+// 사진 여러 장 관리: 각 항목 = { img, w, h, baseDisplayWidth, elements: [], label }
 let photos = [];
 let activePhotoIndex = -1;
+
+let currentZoom = 1;
+let panLastClientX = 0, panLastClientY = 0;
 
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
@@ -586,12 +606,13 @@ document.getElementById('photoInput').addEventListener('change', function(e) {
     const img = new Image();
     img.onload = function() {
       const container = document.getElementById('canvas-container');
-      const maxW = container.clientWidth || (window.innerWidth - 30);
-      const scale = maxW / img.width;
-      const w = maxW;
+      const fitW = container.clientWidth || (window.innerWidth - 30);
+      const bufferW = Math.min(img.width, 1000); // 확대했을 때 선명하게 보이도록 실제 해상도는 더 높게 유지
+      const scale = bufferW / img.width;
+      const w = bufferW;
       const h = img.height * scale;
 
-      photos.push({ img, w, h, elements: [], label: `사진 ${photos.length + 1}` });
+      photos.push({ img, w, h, baseDisplayWidth: fitW, elements: [], label: `사진 ${photos.length + 1}` });
       activePhotoIndex = photos.length - 1;
 
       document.getElementById('uploadArea').style.display = 'none';
@@ -610,8 +631,43 @@ function loadActivePhotoIntoCanvas() {
   if (!p) return;
   canvas.width = p.w;
   canvas.height = p.h;
+  currentZoom = 1;
+  canvas.style.width = p.baseDisplayWidth + 'px';
+  canvas.style.height = 'auto';
+  const zLabel = document.getElementById('zoomLevelLabel');
+  if (zLabel) zLabel.textContent = '100%';
+  const container = document.getElementById('canvas-container');
+  container.scrollLeft = 0;
+  container.scrollTop = 0;
   document.getElementById('photoLabelInput').value = p.label;
   redraw();
+}
+
+function applyZoom() {
+  const p = activePhoto();
+  if (!p) return;
+  canvas.style.width = (p.baseDisplayWidth * currentZoom) + 'px';
+  canvas.style.height = 'auto';
+  document.getElementById('zoomLevelLabel').textContent = Math.round(currentZoom * 100) + '%';
+}
+
+function zoomIn() {
+  if (!activePhoto()) return;
+  currentZoom = Math.min(3, +(currentZoom + 0.25).toFixed(2));
+  applyZoom();
+}
+function zoomOut() {
+  if (!activePhoto()) return;
+  currentZoom = Math.max(1, +(currentZoom - 0.25).toFixed(2));
+  applyZoom();
+}
+function zoomReset() {
+  if (!activePhoto()) return;
+  currentZoom = 1;
+  applyZoom();
+  const container = document.getElementById('canvas-container');
+  container.scrollLeft = 0;
+  container.scrollTop = 0;
 }
 
 function selectPhoto(i) {
@@ -750,6 +806,15 @@ function startDraw(e) {
     return;
   }
 
+  if (currentTool === 'pan') {
+    isDrawing = true;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    panLastClientX = clientX;
+    panLastClientY = clientY;
+    return;
+  }
+
   isDrawing = true;
   if (currentTool === 'pen') { penPoints = [{x:startX,y:startY}]; }
   if (currentTool === 'text') {
@@ -763,6 +828,20 @@ function startDraw(e) {
 
 function moveDraw(e) {
   if (!isDrawing || !activePhoto()) return;
+
+  if (currentTool === 'pan') {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - panLastClientX;
+    const dy = clientY - panLastClientY;
+    const container = document.getElementById('canvas-container');
+    container.scrollLeft -= dx;
+    container.scrollTop -= dy;
+    panLastClientX = clientX;
+    panLastClientY = clientY;
+    return;
+  }
+
   const pos = getPos(e);
   currentX = pos.x; currentY = pos.y;
   if (currentTool === 'pen') { penPoints.push({x:currentX,y:currentY}); }
@@ -773,6 +852,8 @@ function moveDraw(e) {
 function endDraw(e) {
   if (!isDrawing || !activePhoto()) return;
   isDrawing = false;
+
+  if (currentTool === 'pan') return;
   if (e.changedTouches) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
