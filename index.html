@@ -606,6 +606,7 @@ let activePhotoIndex = -1;
 let currentZoom = 1;
 let panLastClientX = 0, panLastClientY = 0;
 let editingRecordId = null;
+let photosLoading = false;
 
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
@@ -1099,37 +1100,38 @@ async function saveRecord() {
   const name = document.getElementById('customerName').value.trim();
   if (!name) { showToast('고객명을 입력해주세요'); return; }
   if (photos.length === 0) { showToast('사진을 최소 1장 추가해주세요'); return; }
+  if (photosLoading) { showToast('사진을 불러오는 중이에요. 잠시 후 다시 눌러주세요'); return; }
 
   showToast('저장 중...');
 
-  // 사진마다 그림을 하나의 이미지로 합쳐서 저장
-  const photoData = photos.map(p => {
-    const tmp = document.createElement('canvas');
-    tmp.width = p.w;
-    tmp.height = p.h;
-    const tctx = tmp.getContext('2d');
-    tctx.drawImage(p.img, 0, 0, p.w, p.h);
-    p.elements.forEach(el => drawElement(tctx, el));
-    return {
-      label: p.label,
-      imageData: tmp.toDataURL('image/jpeg', 0.75)
-    };
-  });
-
-  const totalSize = photoData.reduce((s, p) => s + p.imageData.length, 0);
-  if (totalSize > 850000) {
-    showToast('⚠️ 사진 용량이 커서 저장이 실패할 수 있어요. 사진 장수를 줄여보세요.');
-  }
-
-  const record = {
-    customerName: name,
-    customerAddr: document.getElementById('customerAddr').value,
-    customerPhone: document.getElementById('customerPhone').value,
-    roomType: document.getElementById('roomType').value,
-    photos: photoData
-  };
-
   try {
+    // 사진마다 그림을 하나의 이미지로 합쳐서 저장
+    const photoData = photos.map(p => {
+      const tmp = document.createElement('canvas');
+      tmp.width = p.w;
+      tmp.height = p.h;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(p.img, 0, 0, p.w, p.h);
+      (p.elements || []).forEach(el => drawElement(tctx, el));
+      return {
+        label: p.label,
+        imageData: tmp.toDataURL('image/jpeg', 0.75)
+      };
+    });
+
+    const totalSize = photoData.reduce((s, p) => s + p.imageData.length, 0);
+    if (totalSize > 850000) {
+      showToast('⚠️ 사진 용량이 커서 저장이 실패할 수 있어요. 사진 장수를 줄여보세요.');
+    }
+
+    const record = {
+      customerName: name,
+      customerAddr: document.getElementById('customerAddr').value,
+      customerPhone: document.getElementById('customerPhone').value,
+      roomType: document.getElementById('roomType').value,
+      photos: photoData
+    };
+
     if (editingRecordId) {
       record.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection("apps/app-mu4uauk4/items").doc(editingRecordId).update(record);
@@ -1143,7 +1145,7 @@ async function saveRecord() {
     showEditBanner(false);
     resetForm();
   } catch(e) {
-    showToast('저장 실패: ' + e.message);
+    showToast('저장 실패: ' + (e && e.message ? e.message : e));
   }
 }
 
@@ -1197,6 +1199,7 @@ function editRecord(id) {
   } else {
     document.getElementById('uploadArea').style.display = 'none';
     document.getElementById('editor-section').style.display = 'block';
+    photosLoading = true;
     let remaining = photoList.length;
     photoList.forEach((item, idx) => {
       const img = new Image();
@@ -1211,8 +1214,23 @@ function editRecord(id) {
         };
         remaining--;
         if (remaining === 0) {
-          activePhotoIndex = 0;
-          loadActivePhotoIntoCanvas();
+          photos = photos.filter(p => p);
+          photosLoading = false;
+          activePhotoIndex = photos.length > 0 ? 0 : -1;
+          if (activePhotoIndex >= 0) loadActivePhotoIntoCanvas();
+          else { document.getElementById('uploadArea').style.display = 'block'; document.getElementById('editor-section').style.display = 'none'; }
+          renderPhotoStrip();
+        }
+      };
+      img.onerror = function() {
+        remaining--;
+        showToast(`"${item.label || '사진'}" 불러오기에 실패했어요`);
+        if (remaining === 0) {
+          photos = photos.filter(p => p);
+          photosLoading = false;
+          activePhotoIndex = photos.length > 0 ? 0 : -1;
+          if (activePhotoIndex >= 0) loadActivePhotoIntoCanvas();
+          else { document.getElementById('uploadArea').style.display = 'block'; document.getElementById('editor-section').style.display = 'none'; }
           renderPhotoStrip();
         }
       };
