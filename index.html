@@ -503,6 +503,11 @@
           <input type="range" id="dimFontSize" min="12" max="36" value="20">
           <span id="dimFontSizeVal">20</span>
         </div>
+        <div class="size-slider">
+          <span>텍스트 크기</span>
+          <input type="range" id="textFontSize" min="12" max="48" value="24">
+          <span id="textFontSizeVal">24</span>
+        </div>
       </div>
 
       <div class="zoom-controls">
@@ -586,6 +591,7 @@ let currentTool = 'dim';
 let currentColor = '#ff4444';
 let currentLineWidth = 2;
 let currentFontSize = 20;
+let currentTextSize = 24;
 let isDrawing = false;
 let startX, startY, currentX, currentY;
 let penPoints = [];
@@ -619,6 +625,11 @@ document.getElementById('lineWidth').addEventListener('input', function() {
 document.getElementById('dimFontSize').addEventListener('input', function() {
   currentFontSize = parseInt(this.value);
   document.getElementById('dimFontSizeVal').textContent = this.value;
+});
+
+document.getElementById('textFontSize').addEventListener('input', function() {
+  currentTextSize = parseInt(this.value);
+  document.getElementById('textFontSizeVal').textContent = this.value;
 });
 
 function setTool(t) {
@@ -947,7 +958,7 @@ function confirmText() {
   const val = document.getElementById('textInput').value;
   const p = activePhoto();
   if (val && pendingTextPos && p) {
-    p.elements.push({ type:'text', x:pendingTextPos.x, y:pendingTextPos.y, text:val, color: currentColor, lineWidth: currentLineWidth });
+    p.elements.push({ type:'text', x:pendingTextPos.x, y:pendingTextPos.y, text:val, color: currentColor, lineWidth: currentLineWidth, fontSize: currentTextSize });
     redraw();
   }
   pendingTextPos = null;
@@ -1006,7 +1017,7 @@ function drawElement(c, el) {
     el.points.forEach(p => c.lineTo(p.x, p.y));
     c.stroke();
   } else if (el.type === 'text') {
-    const fs = Math.max(14, (el.lineWidth||2)*6);
+    const fs = el.fontSize || Math.max(14, (el.lineWidth||2)*6);
     c.font = `bold ${fs}px sans-serif`;
     c.fillStyle = el.color || '#ff4444';
     c.strokeStyle = 'rgba(255,255,255,0.9)';
