@@ -285,8 +285,33 @@
   .record-card .rc-actions { display: flex; gap: 6px; margin-top: 12px; }
   .rc-btn { padding: 7px 14px; border-radius: 6px; border: none; font-size: 0.9rem; cursor: pointer; }
   .rc-btn-view { background: #e5e5ea; color: #333; }
+  .rc-btn-edit { background: #fff3cd; color: #8a6d1f; }
   .rc-btn-share { background: #e3f0ff; color: #1a5fb4; }
   .rc-btn-del { background: #fde2e7; color: #c73652; }
+
+  .edit-banner {
+    display: none;
+    background: #fff3cd;
+    border: 1px solid #ffe08a;
+    color: #8a6d1f;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 0.95rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .edit-banner button {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #8a6d1f;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
 
   /* 뷰어 */
   #viewer-overlay {
@@ -384,6 +409,11 @@
 
 <!-- 새 실측 페이지 -->
 <div class="page active" id="page-new">
+
+  <div class="edit-banner" id="editBanner">
+    <span id="editBannerText">✏️ 수정 중</span>
+    <button onclick="cancelEdit()">취소</button>
+  </div>
 
   <!-- 고객 정보 -->
   <div style="background:#ffffff;border-radius:12px;padding:16px;margin-bottom:15px;border:1px solid #e5e5ea;">
@@ -489,7 +519,7 @@
     </div>
   </div>
 
-  <button class="btn-save" onclick="saveRecord()">💾 실측 저장</button>
+  <button class="btn-save" onclick="saveRecord()"><span id="saveBtnLabel">💾 실측 저장</span></button>
 </div>
 
 <!-- 목록 페이지 -->
@@ -569,6 +599,7 @@ let activePhotoIndex = -1;
 
 let currentZoom = 1;
 let panLastClientX = 0, panLastClientY = 0;
+let editingRecordId = null;
 
 const canvas = document.getElementById('mainCanvas');
 const ctx = canvas.getContext('2d');
@@ -965,7 +996,7 @@ function drawElement(c, el) {
   if (el.type === 'dim') {
     drawDimLine(c, el);
   } else if (el.type === 'arrow') {
-    drawArrow(c, el.x1, el.y1, el.x2, el.y2);
+    drawSingleArrow(c, el.x1, el.y1, el.x2, el.y2);
   } else if (el.type === 'rect') {
     c.strokeRect(el.x1, el.y1, el.x2-el.x1, el.y2-el.y1);
   } else if (el.type === 'pen') {
@@ -1014,6 +1045,22 @@ function drawDimLine(c, el) {
     c.fillStyle = el.color || '#ff4444';
     c.fillText(label, mx - tw/2, my + 2);
   }
+}
+
+function drawSingleArrow(c, x1, y1, x2, y2) {
+  const dx = x2-x1, dy = y2-y1;
+  const angle = Math.atan2(dy,dx);
+  const hw = Math.max(8, (c.lineWidth||2)*3);
+  c.beginPath();
+  c.moveTo(x1,y1);
+  c.lineTo(x2,y2);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(x2,y2);
+  c.lineTo(x2 - hw*Math.cos(angle-0.4), y2 - hw*Math.sin(angle-0.4));
+  c.lineTo(x2 - hw*Math.cos(angle+0.4), y2 - hw*Math.sin(angle+0.4));
+  c.closePath();
+  c.fill();
 }
 
 function drawArrow(c, x1, y1, x2, y2) {
@@ -1068,13 +1115,21 @@ async function saveRecord() {
     customerAddr: document.getElementById('customerAddr').value,
     customerPhone: document.getElementById('customerPhone').value,
     roomType: document.getElementById('roomType').value,
-    photos: photoData,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    photos: photoData
   };
 
   try {
-    await db.collection("apps/app-mu4uauk4/items").add(record);
-    showToast('✅ 저장 완료!');
+    if (editingRecordId) {
+      record.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection("apps/app-mu4uauk4/items").doc(editingRecordId).update(record);
+      showToast('✅ 수정 완료!');
+    } else {
+      record.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection("apps/app-mu4uauk4/items").add(record);
+      showToast('✅ 저장 완료!');
+    }
+    editingRecordId = null;
+    showEditBanner(false);
     resetForm();
   } catch(e) {
     showToast('저장 실패: ' + e.message);
@@ -1085,11 +1140,85 @@ function resetForm() {
   document.getElementById('customerName').value = '';
   document.getElementById('customerAddr').value = '';
   document.getElementById('customerPhone').value = '';
+  document.getElementById('roomType').selectedIndex = 0;
   photos = [];
   activePhotoIndex = -1;
   document.getElementById('editor-section').style.display = 'none';
   document.getElementById('uploadArea').style.display = 'block';
   renderPhotoStrip();
+}
+
+function showEditBanner(show, name) {
+  const banner = document.getElementById('editBanner');
+  banner.style.display = show ? 'flex' : 'none';
+  if (show) {
+    document.getElementById('editBannerText').textContent = `✏️ "${name}" 기록 수정 중 — 고치고 실측 저장을 누르세요`;
+  }
+  document.getElementById('saveBtnLabel').textContent = show ? '💾 수정 내용 저장' : '💾 실측 저장';
+}
+
+function activateNewTab() {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-new').classList.add('active');
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+}
+
+function editRecord(id) {
+  const r = allRecords.find(x => x.id === id);
+  if (!r) return;
+
+  editingRecordId = id;
+
+  document.getElementById('customerName').value = r.customerName || '';
+  document.getElementById('customerAddr').value = r.customerAddr || '';
+  document.getElementById('customerPhone').value = r.customerPhone || '';
+  if (r.roomType) document.getElementById('roomType').value = r.roomType;
+
+  const photoList = getPhotoListForRecord(r);
+  photos = new Array(photoList.length);
+  activePhotoIndex = -1;
+
+  if (photoList.length === 0) {
+    document.getElementById('uploadArea').style.display = 'block';
+    document.getElementById('editor-section').style.display = 'none';
+    renderPhotoStrip();
+  } else {
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('editor-section').style.display = 'block';
+    let remaining = photoList.length;
+    photoList.forEach((item, idx) => {
+      const img = new Image();
+      img.onload = function() {
+        const container = document.getElementById('canvas-container');
+        const fitW = container.clientWidth || (window.innerWidth - 30);
+        const bufferW = Math.min(img.width, 1000);
+        const scale = bufferW / img.width;
+        photos[idx] = {
+          img, w: bufferW, h: img.height * scale, baseDisplayWidth: fitW,
+          elements: [], label: item.label || `사진 ${idx + 1}`
+        };
+        remaining--;
+        if (remaining === 0) {
+          activePhotoIndex = 0;
+          loadActivePhotoIntoCanvas();
+          renderPhotoStrip();
+        }
+      };
+      img.src = item.imageData;
+    });
+  }
+
+  activateNewTab();
+  showEditBanner(true, r.customerName);
+  showToast('수정 모드로 불러왔어요. 사진 위 그림은 이미 합쳐져 있어 새로 그리는 것만 추가돼요.');
+}
+
+function cancelEdit() {
+  editingRecordId = null;
+  showEditBanner(false);
+  resetForm();
+  showToast('수정을 취소했어요');
 }
 
 // 목록 불러오기
@@ -1131,6 +1260,7 @@ function renderRecords(records) {
       <div class="rc-room">🚪 ${escapeHtml(r.roomType)||''} ${pCount ? `| 📷 ${pCount}장` : ''}</div>
       <div class="rc-actions">
         <button class="rc-btn rc-btn-view" onclick="viewRecord('${r.id}')">🔍 상세보기</button>
+        <button class="rc-btn rc-btn-edit" onclick="editRecord('${r.id}')">✏️ 수정</button>
         <button class="rc-btn rc-btn-share" onclick="shareRecordById('${r.id}')">📤 공유</button>
         <button class="rc-btn rc-btn-del" onclick="deleteRecord('${r.id}')">🗑️ 삭제</button>
       </div>
